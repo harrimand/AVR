@@ -1,0 +1,131 @@
+>> % Performing calculations to determine the timer configuration to generate a Pulse Width Modulated (PWM) signal
+>> % at a pre-determined frequency and the highest possible pulse width resolution.  Counting to the highest 
+>> % possible counter value for the period between pulse starts will enable higher resolutions.  
+>> %  Example:  If your counter counts to 10 before starting the next cycle, you only have 10 options for the pulse width.
+>> %  If your counter counts to 100 before starting the next cycle, you have 100 options for the pulse width.
+>>
+>> % In this example, we will use the 8 bit timer 2.  It has more options for frequency prescalers than timer 0 and
+>> % Timer 0 on the Arduino is used for the delay() and millis() function so changing it's frequency will change the
+>> % results on those functions.
+>>
+>> % Step 1.)  Create a matrix column containing all the timer prescaler options.  These options are in the ATMega 328
+>> % datasheet under Timer2 -> Register Descriptions -> TCCR2B -> CS2 2..0 (Clock Select Options).
+>>
+>> % We will name our matrix T2.  T2(:,1) will access all rows in column 1.
+>> T2(:,1) = [1; 8; 32; 64; 128; 256; 1024];  % Semicolon delimiters seperate rows in the matrix.
+>>
+>> Fcpu = 16E6;  % Create a variable Fcpu for the CPU frequency.
+>>
+>> % Now create a new column containing timer frequencies.  Fcpu / Prescaler = Timer_Frequency
+>> T2(:,2) = Fcpu ./ T2(:,1);  % Use ./ to divide Fcpu by each cell in the matrix.
+>>
+>> % Now lets see what the matrix looks like
+>> T2
+T2 =
+
+          1   16000000
+          8    2000000
+         32     500000
+         64     250000
+        128     125000
+        256      62500
+       1024      15625
+
+>> % Now we can calculate the period of time for each count based on the frequencies in column 2.
+>> T2(:,3) = 1 ./ T2(:,2); % Period = 1/Frequency
+>> T2
+T2 =
+
+   1.0000e+00   1.6000e+07   6.2500e-08
+   8.0000e+00   2.0000e+06   5.0000e-07
+   3.2000e+01   5.0000e+05   2.0000e-06
+   6.4000e+01   2.5000e+05   4.0000e-06
+   1.2800e+02   1.2500e+05   8.0000e-06
+   2.5600e+02   6.2500e+04   1.6000e-05
+   1.0240e+03   1.5625e+04   6.4000e-05
+
+>> % Now lets switch to engineering notation so we have:
+>>     % e-03 (milli), e-06 (micro), e-09 (nano), e+03 (Kilo), e+06 (Mega) 
+>> format short eng
+>> T2
+T2 =
+
+     1.0000e+00    16.0000e+06    62.5000e-09
+     8.0000e+00     2.0000e+06   500.0000e-09
+    32.0000e+00   500.0000e+03     2.0000e-06
+    64.0000e+00   250.0000e+03     4.0000e-06
+   128.0000e+00   125.0000e+03     8.0000e-06
+   256.0000e+00    62.5000e+03    16.0000e-06
+     1.0240e+03    15.6250e+03    64.0000e-06
+
+>> % Now create a column with the maximum possible 8 bit Timer 2 delay (period).  How long it takes to count
+>> %     from 0 to 255.  255 is the maximum value in 8 bit timers. Including 0 it is 256 counts.
+>> T2(:,4) = 256 .* T2(:,3);
+>> T2
+T2 =
+
+     1.0000e+00    16.0000e+06    62.5000e-09    16.0000e-06
+     8.0000e+00     2.0000e+06   500.0000e-09   128.0000e-06
+    32.0000e+00   500.0000e+03     2.0000e-06   512.0000e-06
+    64.0000e+00   250.0000e+03     4.0000e-06     1.0240e-03
+   128.0000e+00   125.0000e+03     8.0000e-06     2.0480e-03
+   256.0000e+00    62.5000e+03    16.0000e-06     4.0960e-03
+     1.0240e+03    15.6250e+03    64.0000e-06    16.3840e-03
+
+>> % To help keep track of the values in each column, I wrote a function to create column labels and another 
+>> %      function to display the table with the labels.
+>> 
+>> Labels = { 'Prescaler' 'T2_Freq' 'T2_Period' 'Max_Period' };
+
+>> CL = columnLabels(Labels, 4, 15); % 4 spaces from left.  15 characters per column.
+>> displayTable(CL, T2);
+
+    Prescaler      T2_Freq        T2_Period      Max_Period
+     1.0000e+00    16.0000e+06    62.5000e-09    16.0000e-06
+     8.0000e+00     2.0000e+06   500.0000e-09   128.0000e-06
+    32.0000e+00   500.0000e+03     2.0000e-06   512.0000e-06
+    64.0000e+00   250.0000e+03     4.0000e-06     1.0240e-03
+   128.0000e+00   125.0000e+03     8.0000e-06     2.0480e-03
+   256.0000e+00    62.5000e+03    16.0000e-06     4.0960e-03
+     1.0240e+03    15.6250e+03    64.0000e-06    16.3840e-03
+
+>> % The best option will be the smallest Max Period that is greater than the period for 500 Hz.
+>> % Calculate the period for 500 Hz.  P = 1 / F and assign it to a varialbe PWMper (PWM period)
+>> PWMper = 1 / 500
+PWMper =     2.0000e-003
+>>
+>> % Find the smallest value that is greater than 2.0000e-003 in column 4.
+>> T2(5,:)  % Row 5 on Column 4 contains 2.0480e-03
+ans =
+
+   128.0000e+00   125.0000e+03     8.0000e-06     2.0480e-03
+
+>> % With Clock Select Option set to divide CPU clock by 128 we can achieve a delay (period) of 2.048 mS.
+>> 
+>> % The precision will be 8 microSeconds per step.  To calculate the timer value when 2 mS has elapsed 
+>> %    you divide the period 2e-3 by the clock period 8e-6 and then subtract one to account for the 8 uS 
+>> %    it will take for the counter to roll over from the top value to zero.
+>> 2e-3 / 8e-6 - 1
+ans =   249.0000e+000
+>>
+>> % We can set the microcontroller's compare register OCR2A to 249 for a 2 mS period on our PWM output.
+>> % The ATmega 328 data sheet Pg 158 shows that setting Clock Select CS22, CS21 and CS20 to 1 0 1 will 
+>> % set the timer frequency to 125 KHz so each count will take 8 microSeconds. 
+>>
+>> % Setting the OCR2B value between 0 and 249 will set 0 to 100% duty cycle on the OC2B pin with the 
+>> %    appropriate TCCR2A and TCCR2B register settings.  Datasheet Pg 155 to 159.
+>> % TCCR2A COM2B1 and COM2B0 set to 1 0.  Fast PWM (non inverting) mode.
+>> % TCCR2B (WGM22) and TCCR2A (WGM21..WGM20) set Waveform Generation Mode.  We want Fast PWM with OCR2A = TOP.
+>> % WGM22 = 1, WGM21 = 1 and WGM20 = 1.   Mode 7 on datasheet Pg 157.
+>>
+>> % The OC2B pin is on MCU pin 5 (Port D pin PD3) so it will need to be set as an output pin in the Arduino setup.
+>> % Arduino instruction:  DDRD |= (1 << PD3)
+>>
+>> % The Arduino will need another pin configured as ouput to set the motor direction.
+>>
+>> % One option for PC control is to test a signed 8 bit number for positive or negative.
+>> % If positive go right and map() the number to a scale from 0 to 249 before outputting it to OCR2B.
+>> % If negative.  go left.  2s compliment the number (invert and add 1) and then map to a scale from 0 to 249.
+>> %     then output the number to OCR2B.
+>> % Valid signed 8 bit numbers range from -127 decimal to 127 decimal.
+>>
