@@ -1,6 +1,7 @@
 ; Demo multiply 2 16 bit values to get 32 bit result
 ; Multiplying 2 8 bit registers puts 16 bit result in R1..R0
 ; This demo accumulates results in R25..R22
+; Source:  https://github.com/harrimand/AVR/blob/master/mul16bitx16bit.asm
 
 .nolist
 .include "m328pdef.inc"
@@ -55,9 +56,10 @@ mul16:
 		add 	res2, R0
 		adc 	res3, R1
 		ret
-		
-;		47 21
-;		5F 2A
+
+;		 H  L
+;M2		47 21
+;M1		5F 2A
 ; 		------
 ;		05 6A
 ;	 0B	A6
