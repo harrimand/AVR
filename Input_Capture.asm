@@ -12,7 +12,9 @@
 .equ	pwMax = 2300  ; 2300 microSecond Pulse Width
 .equ	pwMid = (pwMax - pwMin) / 2
 .equ	pingMax = 6000 ; 6000 uS round trip time for 1 meter
-
+.equ	pingMin = 183 ; 183 uS round trip for 3 cM
+.equ	pulseMap = 19153 ;
+;  PWMbH..L = ((InCapH..L - pingMinH..L) * pulseMapH..L)[Byte3..2] + pwMinH..L 
 
 .def	TEMPH = R17
 .def	TEMP = R16
@@ -26,6 +28,19 @@
 .def	PWMidL = R10
 .def	PWMinH = R9
 .def	PWMinL = R8
+
+
+;--------------------Registers Used for multiply Funcdtion----------- 
+.def	m1H = R19
+.def	m1L = R18
+.def	m2H = R21
+.def	m2L = R20
+.def	res3 = R25	; MSB of 32 bit result (4 bytes)
+.def	res2 = R24
+.def	res1 = R23
+.def	res0 = R22	; LSB of 32 bit result
+.def	ZERO = R4
+//-------------------------------------------------------------------
 
 .ORG	$0000
 		rjmp	RESET
@@ -86,11 +101,13 @@ RESET:
 
 		sei
 
+//-------------------------------------------------------------------
 MAIN:
 		nop
 		nop
 		rjmp	MAIN
 
+//-------------------------------------------------------------------
 captureISR:
 		push	TEMP
 		push	TEMPH
@@ -106,6 +123,20 @@ captureISR:
 		mov 	InCapL, TEMP
 		sbc 	TEMPH, InCapH
 		mov 	InCapH, TEMPH
+		rcall	checkPing
+		mov 	M1H, InCapH
+		mov 	M1L, InCapL
+		subi 	M1L, low(pingMin)
+		sbci	M1H, high(pingMin)
+		rcall	mul16
+		ldi 	TEMP, low(pwMin)
+		add 	res2, TEMP
+		ldi 	TEMP, high(pwMin)
+		adc 	res3, TEMP
+		mov 	PWMbH, res3
+		mov 	PWMbL, res2
+//		sts 	OCR1BH, PWMbH
+//		sts 	OCR1BL, PWMbL
 		pop 	TEMPH
 		pop 	TEMP
 		reti
@@ -118,8 +149,10 @@ StartCapture:
 		pop 	TEMP
 		reti
 
-
+//-------------------------------------------------------------------
 OVF1isr:
+// Set input capture sense to rising edge and output short pulse to
+//	 start Ping Sensor.  Timing pulse starts on rising edge on PB0.
 		push	TEMP
 		push	TEMPH
 		lds 	TEMP, TCCR1B
@@ -135,3 +168,56 @@ TriggerPing:
 		pop 	TEMPH
 		pop 	TEMP
 		reti
+
+//-------------------------------------------------------------------
+checkPing:
+// Verify ping pulse is valid in range for 3 cM to 1 Meter
+// Ping range  Minimum: 183 uS ($B7)  Maximum: 6000 ($1770)
+		push	TEMP
+		ldi 	TEMP, low(pingMin)
+		cp  	InCapL, TEMP
+		ldi 	TEMP, high(pingMin)
+		cpc 	InCapH, TEMP
+		brpl	checkOver
+		ldi 	TEMP, high(pingMin)
+		mov 	inCapH, TEMP
+		ldi 	TEMP, low(pingMin)
+		mov 	inCapL, TEMP
+		pop 	TEMP
+		ret
+
+checkOver:
+		ldi 	TEMP, low(pingMax)
+		cp  	InCapL, TEMP
+		ldi 	TEMP, high(pingMax)
+		cpc 	InCapH, TEMP
+		brmi	return
+		ldi 	TEMP, high(pingMax)
+		mov 	inCapH, TEMP
+		ldi 	TEMP, low(pingMax)
+		mov 	inCapL, TEMP
+return:
+		pop 	TEMP
+		ret
+
+//-------------------------------------------------------------------
+
+mul16:
+		ldi 	M2H, high(pulseMap)
+		ldi 	M2L, low(pulseMap)
+		clr 	res3
+		clr 	res2
+		mul 	M1L, M2L	; Result to R1..R0
+		mov 	res0, R0
+		mov 	res1, R1
+		mul 	M1L, M2H
+		add 	res1, R0
+		adc 	res2, R1
+		mul 	M1H, M2L
+		add 	res1, R0
+		adc 	res2, R1
+		adc 	res3, ZERO
+		mul 	M1H, M2H
+		add 	res2, R0
+		adc 	res3, R1
+		ret
