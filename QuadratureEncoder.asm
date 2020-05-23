@@ -1,8 +1,12 @@
-
+; Darrell Harriman  05-22-2020
 ; Read quadrature encoder on INT0 and INT1
 ; INT0 on PD2   INT1 on PD3
 ;
 ;
+; Read quadrature encoder #2 ChA on PA2 and ChB PC3
+; Using PinChange 2 on PA2 and 19 on PC3
+;
+
 .nolist
 .include "M164pdef.inc"
 .include "M164deBounceMacro.asm"
