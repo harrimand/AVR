@@ -5,6 +5,10 @@
 
 .MACRO deBounce
 
+.UNDEF	TEMP
+.UNDEF	TEMPH
+.UNDEF	COUNTER
+
 .def	TEMP2 = R16
 .def	COUNT = R17
 .def	pinMask = R18 
@@ -30,6 +34,14 @@ nextRead:
 		pop 	pinMask
 		pop 	COUNT
 		pop 	TEMP2
+
+.UNDEF	TEMP2
+.DEF	TEMP = R16
+.UNDEF	COUNT
+.DEF	TEMPH = R17
+.UNDEF	pinMask
+.DEF	COUNTER = R18
+.UNDEF	input
 
 .ENDMACRO
 
