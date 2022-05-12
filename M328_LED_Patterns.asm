@@ -63,10 +63,6 @@ RIGHTempty:
 		lsr 	DATA
 		brne	NOTempty_R
 		sbi 	GPIOR0, 1
-		in  	TEMP, GPIOR0
-		ldi 	TEMP2, $04
-		eor 	TEMP, TEMP2
-		out 	GPIOR0, TEMP
 		sbi 	GPIOR0, 2
 NOTempty_R:
 		ret
