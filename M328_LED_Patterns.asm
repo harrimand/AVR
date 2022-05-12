@@ -19,21 +19,22 @@ RESET:
 		ldi 	TEMP, low(RAMEND)
 		out 	SPL, TEMP
 		ldi 	TEMP, $07
-		out 	GPIOR0, TEMP
+		out 	GPIOR0, TEMP	; Flags to control LED sequence 
 		ser 	TEMP
 		out 	DDRB, TEMP
 ;------------------------------------
 MAIN:
 		rcall	kitCar
 		out 	PORTB, DATA
-;		rcall	DELAY
+;		rcall	DELAY		;Lime commented for simulation
 		rjmp	MAIN
 ;------------------------------------
-KitCar:
+KitCar:	; Fill display from left
 		sbis	GPIOR0, 2
 		rjmp	KitCarLeft
 		sbis	GPIOR0, 0
 		rjmp	LEFTempty
+		;Sequence 1_1
 		sec
 		ror 	DATA
 		cpi 	DATA, $FF
@@ -41,7 +42,7 @@ KitCar:
 		cbi 	GPIOR0, 0
 NOTfull_L:
 		ret
-LEFTempty:
+LEFTempty:	;Sequence 1_2  ; Empty Display from Right
 		lsl 	DATA
 		brne	NOTempty_L
 		sbi 	GPIOR0, 0
@@ -49,7 +50,7 @@ LEFTempty:
 NOTempty_L:
 		ret
 ;---------------------------------
-KitCarLeft:
+KitCarLeft:	;Sequence 2_1  ; Fill display from Right
 		sbis 	GPIOR0, 1
 		rjmp	RIGHTempty
 		sec
@@ -59,7 +60,7 @@ KitCarLeft:
 		cbi 	GPIOR0, 1
 NOTfull_R:
 		ret
-RIGHTempty:
+RIGHTempty:	;Sequence 2_2  ; Empty display from Left
 		lsr 	DATA
 		brne	NOTempty_R
 		sbi 	GPIOR0, 1
@@ -67,7 +68,7 @@ RIGHTempty:
 NOTempty_R:
 		ret
 ;-----------------------------------
-DELAY:
+DELAY:  	; Programmed Delay Loop consumes 1E6 cycles (1 Sec at 1 MHz)
 		ldi 	R21, $06
 LOOP3:
 		ldi 	R20, $D9
