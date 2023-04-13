@@ -1,5 +1,6 @@
 ;Darrell Harriman
 ;Testing AVR download
+; Reading a table of data from flash memory and outputting it to PORTB on Timer0 Overflow Interrupt
 
 .nolist
 .include "M328Pdef.inc"
@@ -16,26 +17,27 @@
 		rjmp	RESET
 .ORG	OVF0addr
 		rjmp	ReadTable
+		; rjno	KitFun
 .ORG	INT_VECTORS_SIZE
-
+;------------------------------------------------------------------
 RESET:
 		ldi 	TEMP, high(RAMEND)  ; Stack pointer at RAMEND
-		out		SPH, TEMP
+		out	SPH, TEMP
 		ldi 	TEMP, low(RAMEND)
-		out		SPL, TEMP
+		out 	SPL, TEMP
 
 		ser 	TEMP 		;PORTB all pins output
 		out 	DDRB, TEMP
 
 		clr 	COUNT
 
-		clr		TEMP
-		mov		kit, TEMP
+		clr	TEMP
+		mov	kit, TEMP
 
-		ldi		ZH, high(DATA<<1)
-		ldi		ZL, low(DATA<<1)
-		ldi		YH, high(DATAend<<1)
-		ldi		YL, low(DATAend<<1)
+		ldi 	ZH, high(DATA<<1)
+		ldi 	ZL, low(DATA<<1)
+		ldi 	YH, high(DATAend<<1)
+		ldi 	YL, low(DATAend<<1)
 
 		ldi 	TEMP, (1<<TOIE0)  ; Timer 0 Overflow Interrupt Enable
 		sts  	TIMSK0, TEMP
@@ -47,7 +49,7 @@ RESET:
 		out 	SMCR, TEMP
 
 		sei
-
+;------------------------------------------------------------------
 MAIN:
 		nop
 		nop
@@ -55,20 +57,19 @@ MAIN:
 		nop
 		rjmp	MAIN
 
-T0ovf:  ;Interrupt Service Routine
-		ldi		TEMP, $80
-		out		TCNT0, TEMP 
+T0ovf:  ;Timer 0 Overflow Interrupt Service Routine
+		ldi 	TEMP, $80
+		out 	TCNT0, TEMP 
 		inc 	COUNT
 		out 	PORTB, COUNT
 		reti
-
-
+;------------------------------------------------------------------
 KitFun:
-		push	TEMP
+		push		TEMP
 		ldi		TEMP, $C0
 		out		TCNT0, TEMP
 		tst		kit
-		brne	noInit
+		brne		noInit
 		ser		kitSource
 		in		TEMP, GPIOR0
 		ldi		TEMP2, $01
@@ -77,11 +78,11 @@ KitFun:
 		ser		kitSource
 noInit:
 		in		TEMP, GPIOR0
-		sbrs	TEMP, 0
-		rjmp	ShiftRight
+		sbrs		TEMP, 0
+		rjmp		ShiftRight
 		rol		kitSource
 		rol		kit
-		rjmp Return
+		rjmp		Return
 ShiftRight:
 		ror		kitSource
 		ror		kit
@@ -89,23 +90,24 @@ Return:
 		out		PORTB, kit
 		pop		TEMP
 		reti
-
-ReadTable:
+;------------------------------------------------------------------
+ReadTable:	
+		push		TEMP
 		lpm		TEMP, Z+
 		cp		ZL, YL
 		cpc		ZH, YH
-		brne	NotEnd
+		brne		NotEnd
 		ldi		ZH, high(DATA<<1)
 		ldi		ZL, low(DATA<<1)
 NotEnd:
 		out		PORTB, TEMP
+		pop 		TEMP
 		reti
+ProgEnd:
+;------------------------------------------------------------------
 
+.ORG ProgEnd + 0x40/2 - ((ProgEnd + 0x40/2) % 16)
 
-;ProgEnd:
-;.ORG ProgEnd + 0x40 - ((ProgEnd + 0x40) % 0x10)
-.ORG  $00A0
-; .dseg
 DATA:
 .db		0x18, 0x3c, 0x7e, 0xff, 0xff, 0xe7, 0xc3, 0x81
 .db		0x80, 0x81, 0xc1, 0xc3, 0xe3, 0xe7, 0xf7, 0x7f
@@ -116,8 +118,8 @@ DATA:
 .db		0xfd, 0xfc, 0xf9, 0xf8, 0xf4, 0xf2, 0xf1, 0xf0
 .db		0xe8, 0xe2, 0xe1, 0xe0, 0xd0, 0xc8, 0xc4, 0xc2
 .db		0xc0, 0xa0, 0x90, 0x88, 0x84, 0x82, 0x81, 0x40
-.db     0x20, 0x10, 0x8, 0x4, 0x2, 0x1, 0xff, 0x0
-.db     0xff, 0x0, 0xff, 0x0, 0xff, 0x7f, 0xbf, 0xdf
+.db 		0x20, 0x10, 0x8, 0x4, 0x2, 0x1, 0xff, 0x0
+.db     	0xff, 0x0, 0xff, 0x0, 0xff, 0x7f, 0xbf, 0xdf
 .db		0xef, 0xf7, 0xfb, 0xfd, 0x7e, 0xbe, 0xde, 0xee
 .db		0xf6, 0xfa, 0xfc, 0xbc, 0xdc, 0xec, 0xf4, 0xf8
 .db		0x78, 0xb8, 0xe8, 0xf0, 0x70, 0xb0, 0xd0, 0xe0
