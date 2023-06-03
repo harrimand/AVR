@@ -8,7 +8,7 @@
 
 .ORG	$0000
 		rjmp	RESET
-.ORG	PCI2addr
+.ORG	PCI1addr
 		rjmp	PinChange2
 
 
@@ -18,15 +18,17 @@ RESET:
 		ldi 	TEMP, low(RAMEND)
 		out 	SPL, TEMP
 
-		ldi 	TEMP, (1<<PCINT13)|(1<<PCINT12)|(1<<PCINT11)|(1<<PCINT10)
+		ldi 	TEMP, (1<<PCINT11)|(1<<PCINT10)|(1<<PCINT9)|(1<<PCINT8)
 		sts 	PCMSK1, TEMP
 
 		clr 	TEMP
 		sts 	DDRJ, TEMP
 
-		ldi 	TEMP, (1<<PJ4)|(1<<PJ3)|(1<<PJ2)|(1<<PJ1)
+		ldi 	TEMP, (1<<PJ3)|(1<<PJ2)|(1<<PJ1)|(1<<PJ0)
 		sts 	PORTJ, TEMP
 
+		ldi 	TEMP, (1<<PCIE1)
+		sts 	PCICR, TEMP
 
 		sei
 
@@ -38,6 +40,7 @@ MAIN:
 
 PinChange2:
 		push	TEMP
-		
+		clr 	TEMP
 		pop 	TEMP
 		reti
+		
