@@ -1,0 +1,43 @@
+; M2560 Final Practice
+
+.nolist
+.include "m2560def.inc"
+.list
+
+.def	TEMP = R16
+
+.ORG	$0000
+		rjmp	RESET
+.ORG	PCI2addr
+		rjmp	PinChange2
+
+
+RESET:
+		ldi 	TEMP, high(RAMEND)
+		out 	SPH, TEMP
+		ldi 	TEMP, low(RAMEND)
+		out 	SPL, TEMP
+
+		ldi 	TEMP, (1<<PCINT13)|(1<<PCINT12)|(1<<PCINT11)|(1<<PCINT10)
+		sts 	PCMSK1, TEMP
+
+		clr 	TEMP
+		sts 	DDRJ, TEMP
+
+		ldi 	TEMP, (1<<PJ4)|(1<<PJ3)|(1<<PJ2)|(1<<PJ1)
+		sts 	PORTJ, TEMP
+
+
+		sei
+
+MAIN:
+		nop
+		nop
+		nop
+		rjmp	MAIN
+
+PinChange2:
+		push	TEMP
+		
+		pop 	TEMP
+		reti
