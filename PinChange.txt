@@ -25,7 +25,7 @@ RESET:
 		out 	SPH, TEMP
 		ldi 	TEMP, low(RAMEND)
 		out 	SPL, TEMP
-
+; Configure Pin Chang Interrupts
 		ldi 	TEMP, (1<<PCINT12)|(1<<PCINT11)|(1<<PCINT10)|(1<<PCINT9)
 		sts 	PCMSK1, TEMP
 
@@ -47,40 +47,38 @@ RESET:
 		sei
 
 MAIN:
-		nop
-		nop
-		sbis	GPIOR0, 7
+		sbis	GPIOR0, 7    ; Pin Change Flag
 		rjmp	NoFun
-		ldi 	ZH, high(FunAddress)
-		ldi 	ZL, low(FunAddress)
-		add 	ZL, PCbit
+		ldi 	ZH, high(FunAddress)  ; Fuunction Address Table
+		ldi 	ZL, low(FunAddress)   ; Base Address
+		add 	ZL, PCbit             ; Add offset to function address
 		adc 	ZH, ZERO
-		lsl 	ZL
-		lpm 	TEMP, Z+
+		lsl 	ZL       ; Convert Word Address to Byte Address for LPM
+		lpm 	TEMP, Z+   ; Loadd Function Address to TEMP
 		lpm 	TEMPH, Z
-		mov 	ZL, TEMP
+		mov 	ZL, TEMP    ;Move TEMP to Z for icall 
 		mov 	ZH, TEMPH
-		icall		
-		cbi 	GPIOR0, 7		
+		icall		    ; Indirect Call to function 
+		cbi 	GPIOR0, 7   ; Clear Pin Change Flag		
 NoFun:
 		nop
 		rjmp	MAIN
 
-PinChange2:
+PinChange2:  ; ISR for pin change finds pins 0..3 changed
 		push	TEMP
-		lds  	TEMP, PINJ
-		andi	TEMP, 0x0F
-		eor 	TEMP, PJold
-		lds 	PJold, PINJ
-		tst 	TEMP
-		breq	ZeroEscape
-		clr 	PCbit
+		lds  	TEMP, PINJ  ; Read new pin values
+		andi	TEMP, 0x0F  ; Mask out other pin values
+		eor 	TEMP, PJold ; Exclusive OR to find changed pin
+		lds 	PJold, PINJ ; copy pin values for next comparison 
+		tst 	TEMP        ;Confirm that a pin was changed
+		breq	ZeroEscape  ; If no pin changed, don't call function
+		clr 	PCbit       ; Clear Counter to locate bit position
 FindBit:
-		inc 	PCbit
-		lsr 	TEMP
-		brcc	FindBit
-		dec 	PCbit
-		sbi 	GPIOR0, 7
+		inc 	PCbit       ; Count shifts to find set bit
+		lsr 	TEMP        ; Shift Right into Carry
+		brcc	FindBit     ; If Carry Clear, shift again
+		dec 	PCbit       ; Subtract 1 for bit positions starting at 0
+		sbi 	GPIOR0, 7   ; Set Pin Changed Flag
 
 ZeroEscape:
 		pop 	TEMP
@@ -99,6 +97,6 @@ Fun3:
 		inc 	FunR3
 		ret
 
-FunAddress:
+FunAddress:  ; Table of function addresses
 .dw 	Fun0, Fun1, Fun2, Fun3
 
