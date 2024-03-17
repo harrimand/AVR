@@ -1,9 +1,10 @@
 ; Collatz Conjecture
 ; https://en.wikipedia.org/wiki/Collatz_conjecture
 
-; solving array if n is even divide by 2 
+; solving array if last value is even divide by 2 
 ;    else multiply by 3 and add 1
 ;    add result to table in SRAM
+;    repeat until result == 1
 
 .nolist
 .include "m328pdef.inc"
