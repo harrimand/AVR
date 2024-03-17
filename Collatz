@@ -1,0 +1,75 @@
+; Collatz Conjecture
+: https://en.wikipedia.org/wiki/Collatz_conjecture
+
+; solving array if n is even divide by 2 
+;    else multiply by 3 and add 1
+;    add result to table in SRAM
+
+.nolist
+.include "m328pdef.inc"
+.list
+
+.def	TEMP = R16
+.def    TEMPH = R17
+.def	input = R18
+.def    ccH = R21
+.def    ccL = R200
+.def    ZERO = R5
+
+.ORG	$0000
+		rjmp	RESET
+.ORG	INT0addr
+		rjmp	doN3P1
+.ORG	INT_VECTORS_SIZE
+RESET:
+		ldi 	TEMP, high(RAMEND)
+		out 	SPH, TEMP
+		ldi 	TEMP, low(RAMEND)
+		out 	SPL, TEMP
+
+    clr     ZERO
+		clr 	TEMP
+		out 	DDRB, TEMP ;Port B Pins Input
+		sbi 	PORTB, PB0 ; Enable Pull-Up resistor on PB0
+
+		ldi 	XH, high(SRAM_START)
+		ldi 	XL, low(SRAM_START)
+
+		ldi 	TEMP, (1<<ISC01)|(1<<ISC00)
+		sts 	EICRA, TEMP  ; INT 0 detects rising Edge
+
+		ldi 	TEMP, (0<<INT1)|(1<<INT0)
+		out 	EIMSK, TEMP  ;  INT 0 Enabled
+
+		sei 	;Global Interrupt Enable
+;------------------------------------------------------------
+MAIN:
+		nop
+		nop
+		nop
+		rjmp	MAIN
+;------------------------------------------------------------
+doN3P1:
+    clr     ccH
+    in      ccL, PINB
+    mov     TEMP, ccL
+next:
+		andi	ccL, $01
+		brne	mul3p1	; Branch if ODD
+		lsr 	ccH     ;shift right to divide by 2
+    ror     ccL
+    rnmp    Store
+mul3p1:
+		mov 	TEMPH, ccH
+    mov     TEMP, ccL
+    lsl     ccL
+    rol     ccH
+    add     ccL, TEMP
+    adc     ccH, TEMPH
+Store:
+		st  	X+, ccH
+    st      X+, ccL
+    cpi     ccL, $01
+    cpc     ccH, ZERO
+    brne    next
+		reti
