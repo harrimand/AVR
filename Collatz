@@ -31,7 +31,8 @@ RESET:
 
         clr     TEMP
         out     DDRB, TEMP ;Port B Pins Input
-        sbi     PORTB, PB0 ;
+        cbi     DDRD, PD2  ; INT 0 pin Input
+        sbi     PORTD, PD2 ; Enable Pull-Up resistor on PD2
 
         ldi     XH, high(SRAM_START)
         ldi     XL, low(SRAM_START)
