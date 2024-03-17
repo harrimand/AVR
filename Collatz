@@ -78,4 +78,6 @@ Store:
         cpi     ccL, $01 ; Check if 16 bit value = 1
         cpc     ccH, ZERO
         brne    next ; If Not == 1 continue to next value
+        st      X+, ZERO ; Mark end of array with $0000
+        st      X+, ZERO
         reti         ; Else return to MAIN program.
