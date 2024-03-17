@@ -12,8 +12,8 @@
 .def    TEMP = R16
 .def    TEMPH = R17
 .def    input = R18
-.def    ccH = R21
-.def    ccL = R20
+.def    ccH = R25
+.def    ccL = R24                                                                                              
 .def    ZERO = R5
 
 .ORG    $0000
@@ -71,6 +71,7 @@ mul3p1: ; Copy 16 bit value to TEMPH and TEMP
         ; Add original 16 bit value (2n + n) = 3n
         add     ccL, TEMP
         adc     ccH, TEMPH
+        adiw    ccH:ccL, $01  ; Add 1 to word
 Store:
         st      X+, ccH ; Store High byte
         st      X+, ccL ; Store Low byte
