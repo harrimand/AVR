@@ -1,5 +1,5 @@
 ; Collatz Conjecture
-: https://en.wikipedia.org/wiki/Collatz_conjecture
+; https://en.wikipedia.org/wiki/Collatz_conjecture
 
 ; solving array if n is even divide by 2 
 ;    else multiply by 3 and add 1
@@ -9,67 +9,71 @@
 .include "m328pdef.inc"
 .list
 
-.def	TEMP = R16
+.def    TEMP = R16
 .def    TEMPH = R17
-.def	input = R18
+.def    input = R18
 .def    ccH = R21
-.def    ccL = R200
+.def    ccL = R20
 .def    ZERO = R5
 
-.ORG	$0000
-		rjmp	RESET
-.ORG	INT0addr
-		rjmp	doN3P1
-.ORG	INT_VECTORS_SIZE
+.ORG    $0000
+        rjmp    RESET
+.ORG    INT0addr
+        rjmp    doN3P1
+.ORG    INT_VECTORS_SIZE
 RESET:
-		ldi 	TEMP, high(RAMEND)
-		out 	SPH, TEMP
-		ldi 	TEMP, low(RAMEND)
-		out 	SPL, TEMP
+        ldi     TEMP, high(RAMEND)
+        out     SPH, TEMP
+        ldi     TEMP, low(RAMEND)
+        out     SPL, TEMP
 
-    clr     ZERO
-		clr 	TEMP
-		out 	DDRB, TEMP ;Port B Pins Input
-		sbi 	PORTB, PB0 ; Enable Pull-Up resistor on PB0
+        clr     ZERO
 
-		ldi 	XH, high(SRAM_START)
-		ldi 	XL, low(SRAM_START)
+        clr     TEMP
+        out     DDRB, TEMP ;Port B Pins Input
+        sbi     PORTB, PB0 ;
 
-		ldi 	TEMP, (1<<ISC01)|(1<<ISC00)
-		sts 	EICRA, TEMP  ; INT 0 detects rising Edge
+        ldi     XH, high(SRAM_START)
+        ldi     XL, low(SRAM_START)
 
-		ldi 	TEMP, (0<<INT1)|(1<<INT0)
-		out 	EIMSK, TEMP  ;  INT 0 Enabled
+        ldi     TEMP, (1<<ISC01)|(1<<ISC00)
+        sts     EICRA, TEMP  ; Detect Rising Edge
 
-		sei 	;Global Interrupt Enable
-;------------------------------------------------------------
+        ldi     TEMP, (0<<INT1)|(1<<INT0)
+        out     EIMSK, TEMP  ;  Int 0 Enabled
+
+        sei     ;Global Interrupt Enable
+
+;--------------------------------------------------------------------
 MAIN:
-		nop
-		nop
-		nop
-		rjmp	MAIN
-;------------------------------------------------------------
+        nop
+        nop
+        nop
+        rjmp    MAIN
+;--------------------------------------------------------------------
 doN3P1:
-    clr     ccH
-    in      ccL, PINB
-    mov     TEMP, ccL
+        clr     ccH
+        in      ccL, PINB
+        mov     TEMP, ccL
 next:
-		andi	ccL, $01
-		brne	mul3p1	; Branch if ODD
-		lsr 	ccH     ;shift right to divide by 2
-    ror     ccL
-    rnmp    Store
-mul3p1:
-		mov 	TEMPH, ccH
-    mov     TEMP, ccL
-    lsl     ccL
-    rol     ccH
-    add     ccL, TEMP
-    adc     ccH, TEMPH
+        andi    ccL, $01 ; If ccL is odd result == 1
+        brne    mul3p1  ; Branch if ODD
+        lsr     ccH     ;shift right to divide by 2
+        ror     ccL
+        rjmp    Store
+mul3p1: ; Copy 16 bit value to TEMPH and TEMP
+        mov     TEMPH, ccH
+        mov     TEMP, ccL
+        ; Double 16 bit value by shifting left
+        lsl     ccL
+        rol     ccH
+        ; Add original 16 bit value (2n + n) = 3n
+        add     ccL, TEMP
+        adc     ccH, TEMPH
 Store:
-		st  	X+, ccH
-    st      X+, ccL
-    cpi     ccL, $01
-    cpc     ccH, ZERO
-    brne    next
-		reti
+        st      X+, ccH ; Store High byte
+        st      X+, ccL ; Store Low byte
+        cpi     ccL, $01 ; Check if 16 bit value = 1
+        cpc     ccH, ZERO
+        brne    next ; If Not == 1 continue to next value
+        reti         ; Else return to MAIN program.
