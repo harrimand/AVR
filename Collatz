@@ -54,9 +54,9 @@ MAIN:
 doN3P1:
         clr     ccH
         in      ccL, PINB
-        mov     TEMP, ccL
 next:
-        andi    ccL, $01 ; If ccL is odd result == 1
+        mov     TEMP, ccL
+        andi    TEMP, $01 ; If ccL is odd result == 1
         brne    mul3p1  ; Branch if ODD
         lsr     ccH     ;shift right to divide by 2
         ror     ccL
