@@ -1,84 +1,83 @@
 ; Collatz Conjecture
 ; https://en.wikipedia.org/wiki/Collatz_conjecture
 
-; solving array if last value is even divide by 2 
+; solving array if n is even divide by 2 
 ;    else multiply by 3 and add 1
 ;    add result to table in SRAM
-;    repeat until result == 1
 
 .nolist
 .include "m328pdef.inc"
 .list
 
-.def    TEMP = R16
+.def	TEMP = R16
 .def    TEMPH = R17
-.def    input = R18
+.def	input = R18
 .def    ccH = R25
-.def    ccL = R24                                                                                              
+.def    ccL = R24
 .def    ZERO = R5
 
-.ORG    $0000
-        rjmp    RESET
-.ORG    INT0addr
-        rjmp    doN3P1
-.ORG    INT_VECTORS_SIZE
+.ORG	$0000
+	rjmp	RESET
+.ORG	INT0addr
+	rjmp	doN3P1
+.ORG	INT_VECTORS_SIZE
 RESET:
-        ldi     TEMP, high(RAMEND)
-        out     SPH, TEMP
-        ldi     TEMP, low(RAMEND)
-        out     SPL, TEMP
+	ldi 	TEMP, high(RAMEND)
+	out 	SPH, TEMP
+	ldi 	TEMP, low(RAMEND)
+	out 	SPL, TEMP
 
-        clr     ZERO
+    	clr     ZERO
+	clr 	TEMP
+	out 	DDRB, TEMP ;Port B Pins Input
+	cbi 	DDRD, PD2 ; INT 0 pin Input
+	sbi 	PORTD, PD2 ; Enable Pull-Up resistor on PD2
 
-        clr     TEMP
-        out     DDRB, TEMP ;Port B Pins Input
-        cbi     DDRD, PD2  ; INT 0 pin Input
-        sbi     PORTD, PD2 ; Enable Pull-Up resistor on PD2
+	ldi 	XH, high(SRAM_START)
+	ldi 	XL, low(SRAM_START)
 
-        ldi     XH, high(SRAM_START)
-        ldi     XL, low(SRAM_START)
+	ldi 	TEMP, (1<<ISC01)|(1<<ISC00)
+	sts 	EICRA, TEMP  ; INT 0 detects rising Edge
 
-        ldi     TEMP, (1<<ISC01)|(1<<ISC00)
-        sts     EICRA, TEMP  ; Detect Rising Edge
+	ldi 	TEMP, (0<<INT1)|(1<<INT0)
+	out 	EIMSK, TEMP  ;  INT 0 Enabled
 
-        ldi     TEMP, (0<<INT1)|(1<<INT0)
-        out     EIMSK, TEMP  ;  Int 0 Enabled
-
-        sei     ;Global Interrupt Enable
-
-;--------------------------------------------------------------------
+	sei 	;Global Interrupt Enable
+;------------------------------------------------------------
 MAIN:
+	nop
+	nop
         nop
-        nop
-        nop
-        rjmp    MAIN
-;--------------------------------------------------------------------
+	rjmp	MAIN
+;------------------------------------------------------------
 doN3P1:
-        clr     ccH
-        in      ccL, PINB
+    	clr     ccH
+    	in      ccL, PINB
+	st  	X+, ccH
+    	st      X+, ccL
 next:
-        mov     TEMP, ccL
-        andi    TEMP, $01 ; If ccL is odd result == 1
-        brne    mul3p1  ; Branch if ODD
-        lsr     ccH     ;shift right to divide by 2
-        ror     ccL
-        rjmp    Store
-mul3p1: ; Copy 16 bit value to TEMPH and TEMP
-        mov     TEMPH, ccH
-        mov     TEMP, ccL
-        ; Double 16 bit value by shifting left
-        lsl     ccL
-        rol     ccH
-        ; Add original 16 bit value (2n + n) = 3n
-        add     ccL, TEMP
-        adc     ccH, TEMPH
-        adiw    ccH:ccL, $01  ; Add 1 to word
+    	mov     TEMP, ccL
+	andi	TEMP, $01
+	brne	mul3p1	; Branch if ODD
+	lsr 	ccH     ;shift right to divide by 2
+    	ror     ccL
+    	rjmp    Store
+mul3p1:  ;Multiply by 3 and Add 1 (2n + n) + 1 = 3n + 1
+	movw 	TEMPH:TEMP, ccH:CCL
+    	lsl     ccL        ;Multiply by 2  ( 2n )
+    	rol     ccH
+    	add     ccL, TEMP  ; ( + n )
+    	adc     ccH, TEMPH
+	adiw	ccH:ccL, $01 ; ( + 1 )
 Store:
-        st      X+, ccH ; Store High byte
-        st      X+, ccL ; Store Low byte
-        cpi     ccL, $01 ; Check if 16 bit value = 1
-        cpc     ccH, ZERO
-        brne    next ; If Not == 1 continue to next value
-        st      X+, ZERO ; Mark end of array with $0000
-        st      X+, ZERO
-        reti         ; Else return to MAIN program.
+	st  	X+, ccH
+    	st      X+, ccL
+    	cpi     ccL, $01        ; Check if result == 1
+    	cpc     ccH, ZERO
+    	brne    next            ; If not == 1 calculate next value
+	movw	YH:YL, XH:XL        ;Store Table End Address
+	st  	X+, ZERO        ; Mark end of table
+	st  	X, ZERO
+	ldi 	XH, high(SRAM_START) ; Reset table pointer
+	ldi 	XL, low(SRAM_START)
+	reti
