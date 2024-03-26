@@ -24,8 +24,13 @@ RESET:
 		out 	PORTB, TEMP
 
 MAIN:	
-
-		rcall	checkPins3 ;Select checkPins0, 1, or 2
+		;Uncomment one or more rcall instructions
+		; Set PinB Pins 3 and 4
+		nop
+		rcall	checkPins1
+		rcall	checkPins2
+		rcall	checkPins3
+		rcall	checkPins4
 		rjmp	MAIN
 
 ;Method 1
