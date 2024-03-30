@@ -71,8 +71,8 @@ CopyTable:
 CopyNext:
 		lpm 	TEMP, Z+
 		st  	X+, TEMP
-		cp  	YL, XL
-		cpc 	YH, XH
+		cp  	YL, ZL
+		cpc 	YH, ZH
 		brne	CopyNext
 		ret
 
