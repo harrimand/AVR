@@ -5,6 +5,7 @@
 
 .nolist
 .include "m1284Pdef.inc"
+.include "clrSRAM.asm"
 .list
 
 .def 	TEMP = R16
@@ -18,14 +19,15 @@
 		rjmp 	FindButton
 .ORG	INT_VECTORS_SIZE
 RESET:
+clrSRAM
 		ldi 	TEMP, high(RAMEND)
 		out 	SPH, TEMP
 		ldi 	TEMP, low(RAMEND)
 		out 	SPL, TEMP
 
 		eor 	TEMP, TEMP
-		out 	DDRA, TEMP  ;PortA3..0 INPUT
-		ldi 	TEMP, $0F ; Pull-Ups on Bits 3..0
+		out 	DDRA, TEMP      ;PortA3..0 INPUT
+		ldi 	TEMP, $0F       ; Pull-Ups on Bits 3..0
 		out 	PORTA, TEMP
 
 		; To simulate Pull-Ups set PINA 3..0 High
@@ -33,13 +35,13 @@ RESET:
 		; enabled to simulate button press
 
 		ser 	TEMP
-		out 	DDRB, TEMP  ;PortB7..0 OUTPUT
+		out 	DDRB, TEMP      ;PortB7..0 OUTPUT
 
-		ldi 	TEMP, $0F ;Pins 3..0 PCI enabled
+		ldi 	TEMP, $0F       ;Pins 3..0 PCI enabled
 		sts 	PCMSK0, TEMP		
 
 		ldi 	TEMP, (1<<PCIE0);
-		sts 	PCICR, TEMP ; PCI0 Enabled
+		sts 	PCICR, TEMP     ; PCI0 Enabled
 
 		rcall	CopyTable
 		
@@ -53,9 +55,12 @@ MAIN:
 
 
 FindButton:
+        push    TEMP
+        push    bitCount
+        push    sevSegOut
 		in  	TEMP, PINA
-		andi	TEMP, $0F ;Mask out bits 7..4		
-		; Return if no button pressed
+		andi	TEMP, $0F       ;Mask out bits 7..4		
+		                        ; Return if no button pressed
 		cpi 	TEMP, $0F
 		brne	Pressed
 		reti
@@ -71,15 +76,18 @@ NextBit:  ;Logical Shift Right until carry clear and count shifts
 		add 	XL, bitCount
 		ld  	sevSegOut, X	; Get decoded Seven Segment Data
 
-		lsl 	bitCount ; Double bitCount to index words.
+		lsl 	bitCount        ; Double bitCount to index words.
 
 		ldi 	ZH, high(FunAddresses<<1) ;Load function table base address
 		ldi 	ZL, low(funAddresses<<1)
-		add 	ZL, bitCount  ; add offset to select function address
-		lpm 	XL, Z+ ; Load address into X using Z
+		add 	ZL, bitCount    ; add offset to select function address
+		lpm 	XL, Z+          ; Load address into X using Z
 		lpm 	XH, Z
-		movw	ZH:ZL, XH:XL ; Copy X to Z
-		icall	; Call function at address in Z 
+		movw	ZH:ZL, XH:XL    ; Copy X to Z
+		icall	                ; Call function at address in Z
+        pop     sevSegOut
+        pop     bitCount
+        pop     TEMP 
 		reti
 
 CopyTable:
@@ -97,7 +105,7 @@ CopyNext:
 		brne	CopyNext
 		ret
 
-SevSegTable:
+SevSegTable:  ;Common Cathode outputs for 0..9
 .db		$3F, $06, $5B, $4F, $66, $6D, $7D, $07, $7F, $6F
 SevSegEnd:
 
