@@ -1,0 +1,51 @@
+
+import numpy as np
+import pandas as pd
+from math import log10, floor
+
+# Round to nearest decimal digits.
+def round_half_up(n, decimals=0):
+    multiplier = 10**decimals
+    return floor(n * multiplier + 0.5) / multiplier
+
+# Lambda functions to convert large numbers to engineering notation 
+fixe = lambda n: log10(n)//3 * 3
+feng = lambda n: F"{round_half_up(n / 10** fixe(n), 3)} E {int(fixe(n))}"
+
+MCUclk = np.array([1E6, 8E6, 16E6, 20E6])  # Common MCU clock frequencies
+ps = np.array([1, 8, 64, 256, 1024])  # Prescaler Options
+
+# Max overflow times for 8 bit and 16 bit timers.
+T0 = np.array([[feng(2**8 * p / mc) for p in ps] for mc in MCUclk])
+T1 = np.array([[feng(2**16 * p / mc) for p in ps] for mc in MCUclk])
+
+# Create well formatted Pandas DataFrame for printing.
+MaxT0 = pd.DataFrame(T0, index=MCUclk, columns=ps)
+MaxT1 = pd.DataFrame(T1, index=MCUclk, columns=ps)
+
+# print('\n')
+# print(T0)
+# print('\n')
+# print(T1)
+print('\n')
+print("Max 8 bit overflow time with prescaler for each MCU clk:")
+print(MaxT0)
+print('\n')
+print("Max 16 bit overflow time with prescaler for each MCU clk:")
+print(MaxT1)
+#------------------------------------------------------------------
+# OUTPUT
+# Max 8 bit overflow time with prescaler for each MCU clk:
+#                 1           8            64           256           1024
+# 1000000.0   256.0 E -6  2.048 E -3  16.384 E -3  65.536 E -3  262.144 E -3
+# 8000000.0    32.0 E -6  256.0 E -6   2.048 E -3   8.192 E -3   32.768 E -3
+# 16000000.0   16.0 E -6  128.0 E -6   1.024 E -3   4.096 E -3   16.384 E -3
+# 20000000.0   12.8 E -6  102.4 E -6   819.2 E -6   3.277 E -3   13.107 E -3
+# 
+# 
+# Max 16 bit overflow time with prescaler for each MCU clk:
+#                    1             8             64            256         1024
+# 1000000.0   65.536 E -3  524.288 E -3     4.194 E 0    16.777 E 0  67.109 E 0
+# 8000000.0    8.192 E -3   65.536 E -3  524.288 E -3     2.097 E 0   8.389 E 0
+# 16000000.0   4.096 E -3   32.768 E -3  262.144 E -3     1.049 E 0   4.194 E 0
+# 20000000.0   3.277 E -3   26.214 E -3  209.715 E -3  838.861 E -3   3.355 E 0
