@@ -1,0 +1,76 @@
+; Copy a table from flash to SRAM
+; Read SRAM table and output to PORTD
+
+.nolist
+.include "m328pdef.inc"
+.list
+
+.def	TEMP = R16
+
+.ORG	$0000
+		rjmp	RESET
+.ORG	OVF0addr
+		rjmp	ReadTable
+.ORG	INT_VECTORS_SIZE
+RESET:
+		ldi 	TEMP, high(RAMEND)
+		out 	SPH, TEMP
+		ldi 	TEMP, low(RAMEND)
+		out 	SPL, TEMP
+
+		ldi 	TEMP, $FF
+		out 	DDRD, TEMP
+
+; Address Registers for copying table to SRAM.
+		ldi 	XH, high(SRAM_START + $20)
+		ldi 	XL, low(SRAM_START + $20)
+		ldi 	ZH, high(Pattern << 1)
+		ldi 	ZL, low(Pattern << 1)
+		ldi 	YH, high(PatternEnd << 1)
+		ldi 	YL, low(PatternEnd << 1)
+		
+CopyNext:  ;Copy table to SRAM
+		lpm 	TEMP, Z+
+		st  	X+, TEMP
+		cp  	ZL, YL
+		cpc 	ZH, YH
+		brne	CopyNext
+
+; Address register to read SRAM table
+		ldi 	XH, high(SRAM_START + $20)
+		ldi 	XL, low(SRAM_START + $20)
+
+; Timer 0 Overflow Interrupt Enable
+		ldi 	TEMP, (1<<TOIE0)
+		sts 	TIMSK0, TEMP
+
+; Timer 0 Clock configuration
+		ldi 	TEMP, (1<<CS02)|(0<<CS01)|(1<<CS00)
+		//ldi 	TEMP, (0<<CS02)|(0<<CS01)|(1<<CS00) ;For Simulation
+		out 	TCCR0B, TEMP
+
+		sei
+
+MAIN:
+		nop
+		//rcall	ReadTable
+		nop
+		nop
+		rjmp	MAIN
+
+
+ReadTable: ; Read SRAM table and output to PORTD
+		ldi 	TEMP, $80
+		out 	TCNT0, TEMP
+		ld  	TEMP, X+
+		out 	PORTD, TEMP
+		cpi 	XL, low(SRAM_START + $2C)
+		brne	NoReset
+		ldi 	XH, high(SRAM_START + $20)
+		ldi 	XL, low(SRAM_START + $20)		
+NoReset:
+		reti
+
+Pattern:
+.db		$18, $24, $42, $81, $C3, $E7, $FF, $E7, $C3, $81, $00
+PatternEnd:
