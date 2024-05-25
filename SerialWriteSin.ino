@@ -41,13 +41,16 @@ void setup() {
   Serial.begin(115200);
 }
 
+// sinData table contains 256 bytes.  8 bit index n overflows from 255 to 0 
+//    when it reaches the end of the table.
+
 void loop() {
   static uint8_t n = 0;
   if((millis() - start) > interval){
     uint8_t data = pgm_read_byte_near(sinData + n);
     Serial.println(data);
     Serial.flush();
-    n ++;
+    n ++;  //Overflows from 255 to 0
     start = millis();
   }
 }
